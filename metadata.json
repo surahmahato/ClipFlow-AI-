@@ -1,0 +1,6 @@
+{
+  "name": "ClipFlow AI",
+  "description": "AI viral video clipping studio that transforms long-form videos into engaging short clips with AI hooks, dynamic captions, face tracking, and direct gallery export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

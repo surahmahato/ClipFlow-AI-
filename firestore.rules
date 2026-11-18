@@ -1,0 +1,306 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidAspectRatio(ratio) {
+      return ratio in ['9:16', '16:9', '1:1', '4:5'];
+    }
+
+    // 3. Entity Validators
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid && data.userId.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+             data.planTier in ['FREE', 'PRO', 'PREMIUM'] &&
+             data.clipsGeneratedCount is int && data.clipsGeneratedCount >= 0 && data.clipsGeneratedCount <= 1000000 &&
+             data.brandName is string && data.brandName.size() >= 1 && data.brandName.size() <= 60 &&
+             data.brandPrimaryHex is string && data.brandPrimaryHex.size() >= 4 && data.brandPrimaryHex.size() <= 9 &&
+             data.brandFontStyle is string && data.brandFontStyle.size() >= 1 && data.brandFontStyle.size() <= 40 &&
+             (!('brandIntroTag' in data) || (data.brandIntroTag is string && data.brandIntroTag.size() <= 80)) &&
+             (!('brandOutroTag' in data) || (data.brandOutroTag is string && data.brandOutroTag.size() <= 80)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidVideoProject(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             data.folderName is string && data.folderName.size() >= 1 && data.folderName.size() <= 60 &&
+             data.sourceType in ['LOCAL_VIDEO', 'YOUTUBE_URL', 'DIRECT_URL'] &&
+             data.sourceUrl is string && data.sourceUrl.size() <= 600 &&
+             (!('thumbnailUrl' in data) || (data.thumbnailUrl is string && data.thumbnailUrl.size() <= 600)) &&
+             data.videoCategory is string && data.videoCategory.size() >= 1 && data.videoCategory.size() <= 40 &&
+             data.status in ['ANALYZED', 'RENDERING', 'COMPLETED', 'FAILED'] &&
+             data.durationMs is int && data.durationMs >= 0 && data.durationMs <= 86400000 &&
+             data.transcriptText is string && data.transcriptText.size() <= 20000 &&
+             data.aiSummary is string && data.aiSummary.size() <= 1000 &&
+             (!('copilotInstruction' in data) || (data.copilotInstruction is string && data.copilotInstruction.size() <= 500)) &&
+             isValidAspectRatio(data.aspectRatio) &&
+             data.captionStyle is string && data.captionStyle.size() >= 1 && data.captionStyle.size() <= 40 &&
+             data.captionLanguage is string && data.captionLanguage.size() >= 1 && data.captionLanguage.size() <= 40 &&
+             data.clipCountRequested is int && data.clipCountRequested >= 1 && data.clipCountRequested <= 25 &&
+             data.durationPreset is string && data.durationPreset.size() >= 1 && data.durationPreset.size() <= 40 &&
+             data.intensityPreset is string && data.intensityPreset.size() >= 1 && data.intensityPreset.size() <= 40 &&
+             data.voiceEnhanceEnabled is bool &&
+             data.noiseReductionEnabled is bool &&
+             data.musicEnabled is bool &&
+             data.sfxEnabled is bool &&
+             data.silenceRemovalEnabled is bool &&
+             data.faceTrackingEnabled is bool &&
+             data.speakerLayout is string && data.speakerLayout.size() >= 1 && data.speakerLayout.size() <= 40 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidGeneratedClip(data, userId, projectId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.projectId is string && data.projectId == projectId && data.projectId.size() <= 128 &&
+             data.clipIndex is int && data.clipIndex >= 1 && data.clipIndex <= 100 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 140 &&
+             data.hook is string && data.hook.size() >= 1 && data.hook.size() <= 240 &&
+             data.hookType is string && data.hookType.size() >= 1 && data.hookType.size() <= 50 &&
+             data.hookOptions is list && data.hookOptions.size() <= 10 &&
+             (data.hookOptions.size() == 0 || data.hookOptions[0] is string) &&
+             data.startMs is int && data.startMs >= 0 &&
+             data.endMs is int && data.endMs > data.startMs && data.endMs <= 86400000 &&
+             data.viralScore is int && data.viralScore >= 0 && data.viralScore <= 100 &&
+             data.scoreReason is string && data.scoreReason.size() >= 1 && data.scoreReason.size() <= 600 &&
+             data.transcriptExcerpt is string && data.transcriptExcerpt.size() <= 4000 &&
+             data.captionsText is string && data.captionsText.size() <= 4000 &&
+             (!('translatedCaptionsText' in data) || (data.translatedCaptionsText is string && data.translatedCaptionsText.size() <= 4000)) &&
+             data.captionLanguage is string && data.captionLanguage.size() >= 1 && data.captionLanguage.size() <= 40 &&
+             data.captionStyle is string && data.captionStyle.size() >= 1 && data.captionStyle.size() <= 40 &&
+             data.captionColorHex is string && data.captionColorHex.size() >= 4 && data.captionColorHex.size() <= 9 &&
+             (data.captionPositionY is float || data.captionPositionY is int) && data.captionPositionY >= 0.05 && data.captionPositionY <= 0.95 &&
+             isValidAspectRatio(data.aspectRatio) &&
+             (data.faceFocusX is float || data.faceFocusX is int) && data.faceFocusX >= 0.0 && data.faceFocusX <= 1.0 &&
+             data.platformPreset is string && data.platformPreset.size() >= 1 && data.platformPreset.size() <= 40 &&
+             (!('youtubeTitle' in data) || (data.youtubeTitle is string && data.youtubeTitle.size() <= 150)) &&
+             (!('instagramCaption' in data) || (data.instagramCaption is string && data.instagramCaption.size() <= 1000)) &&
+             (!('tiktokDescription' in data) || (data.tiktokDescription is string && data.tiktokDescription.size() <= 1000)) &&
+             (!('hashtags' in data) || (data.hashtags is string && data.hashtags.size() <= 300)) &&
+             data.qualityHook is int && data.qualityHook >= 0 && data.qualityHook <= 100 &&
+             data.qualityCaption is int && data.qualityCaption >= 0 && data.qualityCaption <= 100 &&
+             data.qualityAudio is int && data.qualityAudio >= 0 && data.qualityAudio <= 100 &&
+             data.qualityFraming is int && data.qualityFraming >= 0 && data.qualityFraming <= 100 &&
+             data.qualityContext is int && data.qualityContext >= 0 && data.qualityContext <= 100 &&
+             (!('localFilePath' in data) || (data.localFilePath is string && data.localFilePath.size() <= 500)) &&
+             data.gallerySaved is bool &&
+             data.rendered is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidClipTemplate(data, userId) {
+      return data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 80 &&
+             isValidAspectRatio(data.aspectRatio) &&
+             data.captionStyle is string && data.captionStyle.size() >= 1 && data.captionStyle.size() <= 40 &&
+             data.captionColorHex is string && data.captionColorHex.size() >= 4 && data.captionColorHex.size() <= 9 &&
+             data.captionLanguage is string && data.captionLanguage.size() >= 1 && data.captionLanguage.size() <= 40 &&
+             data.platformPreset is string && data.platformPreset.size() >= 1 && data.platformPreset.size() <= 40 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 4. Collection Rules
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'planTier', 'clipsGeneratedCount',
+                         'brandName', 'brandPrimaryHex', 'brandFontStyle', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'email', 'planTier', 'clipsGeneratedCount',
+                         'brandName', 'brandPrimaryHex', 'brandFontStyle', 'brandIntroTag',
+                         'brandOutroTag', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'email', 'planTier', 'clipsGeneratedCount',
+                         'brandName', 'brandPrimaryHex', 'brandFontStyle', 'brandIntroTag',
+                         'brandOutroTag', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // User Projects
+      match /projects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(projectId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'folderName', 'sourceType', 'sourceUrl',
+                           'videoCategory', 'status', 'durationMs', 'transcriptText', 'aiSummary',
+                           'aspectRatio', 'captionStyle', 'captionLanguage', 'clipCountRequested',
+                           'durationPreset', 'intensityPreset', 'voiceEnhanceEnabled',
+                           'noiseReductionEnabled', 'musicEnabled', 'sfxEnabled',
+                           'silenceRemovalEnabled', 'faceTrackingEnabled', 'speakerLayout',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'folderName', 'sourceType', 'sourceUrl',
+                           'thumbnailUrl', 'videoCategory', 'status', 'durationMs', 'transcriptText',
+                           'aiSummary', 'copilotInstruction', 'aspectRatio', 'captionStyle',
+                           'captionLanguage', 'clipCountRequested', 'durationPreset',
+                           'intensityPreset', 'voiceEnhanceEnabled', 'noiseReductionEnabled',
+                           'musicEnabled', 'sfxEnabled', 'silenceRemovalEnabled',
+                           'faceTrackingEnabled', 'speakerLayout', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidVideoProject(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(projectId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidVideoProject(incoming(), userId) &&
+                         (
+                           // Action: Rename or organize folder
+                           incoming().diff(existing()).affectedKeys().hasOnly(['title', 'folderName', 'updatedAt']) ||
+                           // Action: Update settings / status
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'status', 'aspectRatio', 'captionStyle', 'captionLanguage',
+                             'clipCountRequested', 'durationPreset', 'intensityPreset',
+                             'voiceEnhanceEnabled', 'noiseReductionEnabled', 'musicEnabled',
+                             'sfxEnabled', 'silenceRemovalEnabled', 'faceTrackingEnabled',
+                             'speakerLayout', 'copilotInstruction', 'updatedAt'
+                           ])
+                         );
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+
+        // Generated Clips under Project
+        match /clips/{clipId} {
+          allow get: if isOwner(userId) && isValidId(userId) && isValidId(projectId) && isValidId(clipId);
+          allow list: if isOwner(userId);
+
+          allow create: if isOwner(userId) &&
+                           isValidId(userId) &&
+                           isValidId(projectId) &&
+                           isValidId(clipId) &&
+                           exists(/databases/$(database)/documents/users/$(userId)/projects/$(projectId)) &&
+                           incoming().keys().hasAll([
+                             'userId', 'projectId', 'clipIndex', 'title', 'hook', 'hookType',
+                             'hookOptions', 'startMs', 'endMs', 'viralScore', 'scoreReason',
+                             'transcriptExcerpt', 'captionsText', 'captionLanguage', 'captionStyle',
+                             'captionColorHex', 'captionPositionY', 'aspectRatio', 'faceFocusX',
+                             'platformPreset', 'qualityHook', 'qualityCaption', 'qualityAudio',
+                             'qualityFraming', 'qualityContext', 'gallerySaved', 'rendered',
+                             'createdAt', 'updatedAt'
+                           ]) &&
+                           incoming().keys().hasOnly([
+                             'userId', 'projectId', 'clipIndex', 'title', 'hook', 'hookType',
+                             'hookOptions', 'startMs', 'endMs', 'viralScore', 'scoreReason',
+                             'transcriptExcerpt', 'captionsText', 'translatedCaptionsText',
+                             'captionLanguage', 'captionStyle', 'captionColorHex',
+                             'captionPositionY', 'aspectRatio', 'faceFocusX', 'platformPreset',
+                             'youtubeTitle', 'instagramCaption', 'tiktokDescription', 'hashtags',
+                             'qualityHook', 'qualityCaption', 'qualityAudio', 'qualityFraming',
+                             'qualityContext', 'localFilePath', 'gallerySaved', 'rendered',
+                             'createdAt', 'updatedAt'
+                           ]) &&
+                           isValidGeneratedClip(incoming(), userId, projectId);
+
+          allow update: if isOwner(userId) &&
+                           isValidId(userId) &&
+                           isValidId(projectId) &&
+                           isValidId(clipId) &&
+                           incoming().userId == existing().userId &&
+                           incoming().projectId == existing().projectId &&
+                           incoming().createdAt == existing().createdAt &&
+                           isValidGeneratedClip(incoming(), userId, projectId) &&
+                           (
+                             // Action: Edit clip metadata, trim, captions, hooks, framing
+                             incoming().diff(existing()).affectedKeys().hasOnly([
+                               'title', 'hook', 'hookType', 'hookOptions', 'startMs', 'endMs',
+                               'viralScore', 'scoreReason', 'captionsText', 'translatedCaptionsText',
+                               'captionLanguage', 'captionStyle', 'captionColorHex',
+                               'captionPositionY', 'aspectRatio', 'faceFocusX', 'platformPreset',
+                               'youtubeTitle', 'instagramCaption', 'tiktokDescription', 'hashtags',
+                               'updatedAt'
+                             ]) ||
+                             // Action: Export / render / save to gallery
+                             incoming().diff(existing()).affectedKeys().hasOnly([
+                               'localFilePath', 'rendered', 'gallerySaved', 'updatedAt'
+                             ])
+                           );
+
+          allow delete: if isOwner(userId) && isValidId(userId) && isValidId(projectId) && isValidId(clipId);
+        }
+      }
+
+      // Saved User Templates
+      match /templates/{templateId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(templateId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(templateId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'name', 'aspectRatio', 'captionStyle',
+                           'captionColorHex', 'captionLanguage', 'platformPreset',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'name', 'aspectRatio', 'captionStyle',
+                           'captionColorHex', 'captionLanguage', 'platformPreset',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidClipTemplate(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(templateId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidClipTemplate(incoming(), userId) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'name', 'aspectRatio', 'captionStyle', 'captionColorHex',
+                           'captionLanguage', 'platformPreset', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(templateId);
+      }
+    }
+  }
+}

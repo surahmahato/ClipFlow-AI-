@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">ClipFlow AI</string>
+    <string name="hero_headline">Turn Long Videos Into Viral Shorts With AI</string>
+    <string name="hero_subtitle">Find the best moments, create engaging hooks, add dynamic captions, and export gallery-ready vertical clips automatically.</string>
+    <string name="url_placeholder">Paste YouTube or direct MP4 URL…</string>
+    <string name="analyze_video">Analyze Video</string>
+    <string name="upload_video">Upload Video</string>
+    <string name="generate_viral_clips">GENERATE VIRAL CLIPS</string>
+    <string name="save_to_gallery">Save to Gallery</string>
+    <string name="download_all_zip">Download All (ZIP)</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="copilot_hint">AI Copilot: e.g. Find 5 clips with strong hooks or translate to Nepali</string>
+</resources>
